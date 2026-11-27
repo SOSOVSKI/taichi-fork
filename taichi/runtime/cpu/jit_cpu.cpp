@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DataLayout.h"
@@ -130,7 +131,7 @@ class JITSessionCPU : public JITSession {
         object_layer_(es_),
 #else
         object_layer_(es_,
-                      [&]() {
+                      [&](const MemoryBuffer &) {
                         auto smgr = std::make_unique<SectionMemoryManager>();
                         memory_manager_ = smgr.get();
                         return smgr;

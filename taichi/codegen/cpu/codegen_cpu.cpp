@@ -251,18 +251,20 @@ void KernelCodeGenCPU::optimize_module(llvm::Module *module) {
 
   std::string err_str;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.str(), err_str);
+      llvm::TargetRegistry::lookupTarget(triple, err_str);
   TI_ERROR_UNLESS(target, err_str);
 
   llvm::TargetOptions options;
   if (compile_config.fast_math) {
     options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-    options.UnsafeFPMath = 1;
+    options.NoSignedZerosFPMath = 1;
+    options.NoTrappingFPMath = 1;
     options.NoInfsFPMath = 1;
     options.NoNaNsFPMath = 1;
   } else {
     options.AllowFPOpFusion = llvm::FPOpFusion::Strict;
-    options.UnsafeFPMath = 0;
+    options.NoSignedZerosFPMath = 0;
+    options.NoTrappingFPMath = 0;
     options.NoInfsFPMath = 0;
     options.NoNaNsFPMath = 0;
   }
@@ -278,12 +280,12 @@ void KernelCodeGenCPU::optimize_module(llvm::Module *module) {
 #endif
   llvm::StringRef mcpu = llvm::sys::getHostCPUName();
   std::unique_ptr<llvm::TargetMachine> target_machine(
-      target->createTargetMachine(triple.str(), mcpu.str(), "", options,
+      target->createTargetMachine(triple, mcpu.str(), "", options,
                                   llvm::Reloc::PIC_, llvm::CodeModel::Small,
                                   opt_level));
   TI_ERROR_UNLESS(target_machine.get(), "Could not allocate target machine!");
 
-  module->setTargetTriple(triple.str());
+  module->setTargetTriple(triple);
   module->setDataLayout(target_machine->createDataLayout());
 
   // Create the new analysis manager

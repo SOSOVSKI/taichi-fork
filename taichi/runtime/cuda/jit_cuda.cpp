@@ -51,8 +51,8 @@ JITModule *JITSessionCUDA ::add_module(std::unique_ptr<llvm::Module> M,
 }
 
 std::string cuda_mattrs() {
-  // TODO: upgrade to ptx78 as supported by LLVM 16
-  return "+ptx63";
+  // GB10 requires PTX 8.8; leave other targets at their LLVM defaults.
+  return CUDAContext::get_instance().get_mcpu() == "sm_121" ? "+ptx88" : "";
 }
 
 std::string convert(std::string new_name) {
@@ -82,6 +82,7 @@ std::string convert(std::string new_name) {
 std::string JITSessionCUDA::compile_module_to_ptx(
     std::unique_ptr<llvm::Module> &module) {
   TI_AUTO_PROF
+  TaichiLLVMContext::strip_nvvmir_version(module.get());
   // Part of this function is borrowed from Halide::CodeGen_PTX_Dev.cpp
   if (llvm::verifyModule(*module, &llvm::errs())) {
     module->print(llvm::errs(), nullptr);
@@ -106,7 +107,7 @@ std::string JITSessionCUDA::compile_module_to_ptx(
   // Allocate target machine
   std::string err_str;
   const llvm::Target *target =
-      TargetRegistry::lookupTarget(triple.str(), err_str);
+      TargetRegistry::lookupTarget(triple, err_str);
   TI_ERROR_UNLESS(target, err_str);
 
   TargetOptions options;
@@ -115,12 +116,14 @@ std::string JITSessionCUDA::compile_module_to_ptx(
     // See NVPTXISelLowering.cpp
     // Setting UnsafeFPMath true will result in approximations such as
     // sqrt.approx in PTX for both f32 and f64
-    options.UnsafeFPMath = 1;
+    options.NoSignedZerosFPMath = 1;
+    options.NoTrappingFPMath = 1;
     options.NoInfsFPMath = 1;
     options.NoNaNsFPMath = 1;
   } else {
     options.AllowFPOpFusion = FPOpFusion::Strict;
-    options.UnsafeFPMath = 0;
+    options.NoSignedZerosFPMath = 0;
+    options.NoTrappingFPMath = 0;
     options.NoInfsFPMath = 0;
     options.NoNaNsFPMath = 0;
   }
@@ -135,12 +138,12 @@ std::string JITSessionCUDA::compile_module_to_ptx(
   const auto opt_level = llvm::CodeGenOpt::Aggressive;
 #endif
   std::unique_ptr<TargetMachine> target_machine(target->createTargetMachine(
-      triple.str(), CUDAContext::get_instance().get_mcpu(), cuda_mattrs(),
+      triple, CUDAContext::get_instance().get_mcpu(), cuda_mattrs(),
       options, llvm::Reloc::PIC_, llvm::CodeModel::Small, opt_level));
 
   TI_ERROR_UNLESS(target_machine.get(), "Could not allocate target machine!");
 
-  module->setTargetTriple(triple.str());
+  module->setTargetTriple(triple);
   module->setDataLayout(target_machine->createDataLayout());
 
   // NVidia's libdevice library uses a __nvvm_reflect to choose

@@ -1140,41 +1140,18 @@ uint32 cuda_match_any_sync_i32(u32 mask, i32 value) {
   return 0;
 }
 
+// These stubs are replaced by NVVM intrinsics when loading CUDA bitcode.
 u32 cuda_match_all_sync_i32(u32 mask, i32 value) {
-#if ARCH_cuda
-  u32 ret;
-  asm volatile("match.all.sync.b32  %0, %1, %2;"
-               : "=r"(ret)
-               : "r"(value), "r"(mask));
-  return ret;
-#else
   return 0;
-#endif
 }
 
 uint32 cuda_match_any_sync_i64(u32 mask, i64 value) {
-#if ARCH_cuda
-  u32 ret;
-  asm volatile("match.any.sync.b64  %0, %1, %2;"
-               : "=r"(ret)
-               : "l"(value), "r"(mask));
-  return ret;
-#else
   return 0;
-#endif
 }
 
-#if ARCH_cuda
-uint32 cuda_active_mask() {
-  unsigned int mask;
-  asm volatile("activemask.b32 %0;" : "=r"(mask));
-  return mask;
-}
-#else
 uint32 cuda_active_mask() {
   return 0;
 }
-#endif
 
 void block_barrier() {
 }

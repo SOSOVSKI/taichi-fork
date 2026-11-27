@@ -520,7 +520,7 @@ void TaskCodeGenLLVM::visit(UnaryOpStmt *stmt) {
           llvm_val[stmt->operand], tlctx->get_data_type(stmt->cast_type));
     }
   } else if (op == UnaryOpType::rsqrt) {
-    llvm::Function *sqrt_fn = llvm::Intrinsic::getDeclaration(
+    llvm::Function *sqrt_fn = llvm::Intrinsic::getOrInsertDeclaration(
         module.get(), llvm::Intrinsic::sqrt, input->getType());
     auto intermediate = builder->CreateCall(sqrt_fn, input, "sqrt");
     llvm_val[stmt] = builder->CreateFDiv(
@@ -2615,6 +2615,7 @@ void TaskCodeGenLLVM::initialize_context() {
     fast_flags.setNoInfs();
     fast_flags.setNoSignedZeros();
     fast_flags.setAllowReassoc();
+    fast_flags.setApproxFunc();
     builder->setFastMathFlags(fast_flags);
   }
 }

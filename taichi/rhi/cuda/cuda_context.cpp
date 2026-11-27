@@ -72,8 +72,8 @@ CUDAContext::CUDAContext()
 
   compute_capability_ = cc_major * 10 + cc_minor;
 
-  if (compute_capability_ > 86) {
-    compute_capability_ = 86;
+  if (compute_capability_ > 121) {
+    compute_capability_ = 121;
   }
 
   driver_.device_get_attribute(
